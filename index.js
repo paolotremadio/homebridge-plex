@@ -78,7 +78,7 @@ Plex.prototype.getState = function (callback) {
           this.log(`There are ${data.size} active sessions:`);
         }
 
-        if (!data.Video) {
+        if (!data.Video && !data.Metadata) {
           this.log('Error in the API response!', JSON.stringify(data));
           callback(null, false);
           return;
