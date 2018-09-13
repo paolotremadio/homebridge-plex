@@ -118,6 +118,7 @@ Plex.prototype.getState = function (callback) {
       },
       (err) => {
         this.log('Could not connect to server', err);
+        callback(null, false);
       }
     );
 };
