@@ -1,4 +1,4 @@
-var request = require("request");
+let PlexAPI = require('plex-api');
 var Service, Characteristic;
 
 module.exports = function (homebridge) {
@@ -11,7 +11,8 @@ module.exports = function (homebridge) {
 function Plex(log, config) {
     this.log = log;
     this.name = config["name"];
-    this.plexToken = config["plex_token"];
+    this.plexUsername = config["plex_username"];
+    this.plexPassword = config["plex_password"];
     this.host = config["host"] || 'localhost';
     this.port = config["port"] || '32400';
     this.filter = config["filter"] || [];
@@ -19,6 +20,13 @@ function Plex(log, config) {
     this.debug = config["debug"] || false;
     this.service = new Service.OccupancySensor(this.name);
     this.playing = false;
+
+    this.client = new PlexAPI({
+        hostname: this.host,
+        port: this.port,
+        username: this.plexUsername,
+        password: this.plexPassword,
+    });
 
     this.service
         .getCharacteristic(Characteristic.OccupancyDetected)
@@ -43,76 +51,76 @@ function Plex(log, config) {
 }
 
 Plex.prototype.getState = function (callback) {
-    var self = this;
+  if (this.debug) {
+    this.log('Getting current state...');
+  }
 
-    if (self.debug)
-        self.log("Getting current state...");
-
-    request.get({
-        url: "http://" + self.host + ":" + self.port + "/status/sessions",
-        headers: {
-            Accept: 'application/json',
-            'X-Plex-Token': self.plexToken
-        }
-    }, function (err, response, body) {
-        if (err || response.statusCode !== 200) {
-            var statusCode = response ? response.statusCode : 1;
-            self.log("Error getting state (status code %s): %s", statusCode, err);
-            callback(err);
-            return;
-        }
-
-        var data = JSON.parse(body);
-        data = data.MediaContainer;
-        var playing = false;
+  this.client
+    .query('/status/sessions')
+    .then(
+      (result) => {
+        const data = result.MediaContainer;
+        let playing = false;
 
         if (data.size === 0) {
-            if (self.debug)
-                self.log('No active sessions on your server. Plex is not playing.');
+          if (this.debug) {
+            this.log('No active sessions on your server. Plex is not playing.');
+          }
 
-            callback(null, false);
-            return;
+          callback(null, false);
+          return;
         }
 
-        if (!self.debug);
-        else if (data.size === 1)
-            self.log('There is one active session:');
-        else
-            self.log('There are %s active sessions:', data.size);
+        if (!this.debug) {
+        } else if (data.size === 1) {
+          this.log('There is one active session:');
+        } else {
+          this.log(`There are ${data.size} active sessions:`);
+        }
 
-        data.Metadata.forEach(function (e) {
-            var player = e.Player.title;
-            var user = e.User.title;
-            var state = e.Player.state;
+        data.Video
+          .forEach((e) => {
+            const player = e.Player.title;
+            const user = e.User.title;
+            const state = e.Player.state;
 
-            var rulesMatch = true;
-            var stateMatch = state === 'playing';
+            let rulesMatch = true;
+            const stateMatch = state === 'playing';
+
             if (stateMatch && player) {
-                rulesMatch = false;
-                self.filter.forEach(function (rule) {
-                    if (self.debug) {
-                        self.log("'" + rule.player + "' vs '" + player + "'")
-                        self.log("'" + rule.user + "' vs '" + user + "'")
-                    }
-                    var playerMatch = !rule.player || rule.player.indexOf(player) > -1;
-                    var userMatch = !rule.user || rule.user.indexOf(user) > -1;
-                    rulesMatch = rulesMatch || playerMatch && userMatch;
+              rulesMatch = false;
+
+              this.filter
+                .forEach((rule) => {
+                  if (this.debug) {
+                    this.log(`'${rule.player}' vs '${player}'`);
+                    this.log(`'${rule.user}' vs '${user}'`);
+                  }
+                  const playerMatch = !rule.player || rule.player.toLowerCase().indexOf(player.toLowerCase()) > -1;
+                  const userMatch = !rule.user || rule.user.toLowerCase().indexOf(user.toLowerCase()) > -1;
+                  rulesMatch = rulesMatch || playerMatch && userMatch;
                 });
             }
 
-            if (self.debug)
-                self.log('→ %s [%s]: %s%s', user, player, state, rulesMatch ? '' : ' (ignored)');
+            if (this.debug) {
+              this.log(`→ ${user} [${player}]: ${state}${rulesMatch ? '' : ' (ignored)'}`);
+            }
 
             playing = playing || stateMatch && rulesMatch;
 
-            if (self.debug || self.playing !== playing)
-                self.log('Plex is %splaying.', (playing ? '' : 'not '));
-        });
+            if (this.debug || this.playing !== playing) {
+              this.log(`Plex is ${(playing ? '' : 'not ')}playing.`);
+            }
+          });
 
-        self.playing = playing;
+        this.playing = playing;
         callback(null, playing);
-    });
-}
+      },
+      (err) => {
+        this.log('Could not connect to server', err);
+      }
+    );
+};
 
 Plex.prototype.getServices = function () {
     return [this.service];
