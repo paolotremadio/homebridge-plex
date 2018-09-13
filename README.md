@@ -22,7 +22,8 @@ Variable | Description
 -------- | -----------
 `accessory` | Must be `Plex`
 `name` | Whatever you want the accessory to be named in Homekit
-`plex_token` | The X-Plex-Token used to access your Plex server API. See [Finding an authentication token / X-Plex-Token](https://support.plex.tv/hc/en-us/articles/204059436-Finding-an-authentication-token-X-Plex-Token)
+`plex_username` | Your plex.tv username
+`plex_password` | Your plex.tv password
 `host` | The hostname / IP address of your Plex server. Defaults to `localhost`, can be omitted if Homebridge runs on the same server as your Plex.
 `port` | The port of your Plex server. Defaults to `32400`
 `filter` | An array of filter rules. See [filtering sessions](#filtering-sessions)
