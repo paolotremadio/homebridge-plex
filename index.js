@@ -78,6 +78,12 @@ Plex.prototype.getState = function (callback) {
           this.log(`There are ${data.size} active sessions:`);
         }
 
+        if (!data.Video) {
+          this.log('Error in the API response!', JSON.stringify(data));
+          callback(null, false);
+          return;
+        }
+
         data.Video
           .forEach((e) => {
             const player = e.Player.title;
@@ -120,7 +126,11 @@ Plex.prototype.getState = function (callback) {
         this.log('Could not connect to server', err);
         callback(null, false);
       }
-    );
+    )
+    .catch((e) => {
+      this.log('Error in querying Plex', e);
+      callback(null, false);
+    });
 };
 
 Plex.prototype.getServices = function () {
