@@ -84,7 +84,9 @@ Plex.prototype.getState = function (callback) {
           return;
         }
 
-        data.Video
+        const dataKey = data.Video || data.Metadata;
+
+        dataKey
           .forEach((e) => {
             const player = e.Player.title;
             const user = e.User.title;
