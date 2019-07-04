@@ -18,6 +18,12 @@
     "homebridge": ">=0.2.0"
   },
   "dependencies": {
-    "plex-api": "^5.2.1"
-  }
+    "plex-api": "^5.2.1",
+    "snyk": "^1.189.0"
+  },
+  "scripts": {
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
+  },
+  "snyk": true
 }
